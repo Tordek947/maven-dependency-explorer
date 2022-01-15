@@ -5,9 +5,9 @@ import * as cp from "child_process";
 const fs = require("fs");
 var dot = require("graphlib-dot");
 
-const execShell = (cmd: string) =>
+const execShell = (cmd: string, currentWorkspace: vscode.Uri) =>
   new Promise<string>((resolve, reject) => {
-    cp.exec(cmd, (err, out) => {
+    cp.exec(cmd, {cwd: currentWorkspace.fsPath}, (err, out) => {
       if (err) {
         return reject(err);
       }
@@ -60,7 +60,11 @@ export function activate(context: vscode.ExtensionContext) {
 
       const mavenExecutableSettings = vscode.workspace.getConfiguration("maven.executable");
       const mavenExecutableOptions = mavenExecutableSettings.get<string>("options") || "";
+      const preferMavenWrapper = mavenExecutableSettings.get<boolean>("preferMavenWrapper") || false;
       const pomLocation = vscode.Uri.joinPath(currentDir!, "pom.xml").fsPath;
+      const mavenBinary = (preferMavenWrapper && fs.existsSync(vscode.Uri.joinPath(currentDir!, "mvnw").fsPath))
+        ? "./mvnw"
+        : "mvn";
 
       currentPanel = vscode.window.createWebviewPanel(
         "openWebview", // Identifies the type of the webview. Used internally
@@ -79,7 +83,8 @@ export function activate(context: vscode.ExtensionContext) {
 
       try {
         await execShell(
-          `mvn ${mavenExecutableOptions} -f ${pomLocation} dependency:tree -DoutputFile=${tempFile} -DoutputType=dot`
+          `${mavenBinary} ${mavenExecutableOptions} -f ${pomLocation} dependency:tree -DoutputFile=${tempFile} -DoutputType=dot`,
+          currentDir!
         );
 
         var digraph = dot.read(fs.readFileSync(tempFile, "UTF-8"));
