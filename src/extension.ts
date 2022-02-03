@@ -63,7 +63,7 @@ export function activate(context: vscode.ExtensionContext) {
       const preferMavenWrapper = mavenExecutableSettings.get<boolean>("preferMavenWrapper") || false;
       const pomLocation = vscode.Uri.joinPath(currentDir!, "pom.xml").fsPath;
       const mavenBinary = (preferMavenWrapper && fs.existsSync(vscode.Uri.joinPath(currentDir!, "mvnw").fsPath))
-        ? "./mvnw"
+        ? (process.platform === "win32" ? "mvnw.cmd" : "./mvnw")
         : "mvn";
 
       currentPanel = vscode.window.createWebviewPanel(
